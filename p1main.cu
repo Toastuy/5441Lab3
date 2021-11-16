@@ -4,7 +4,6 @@
 const int MATRIXSIZE = 4000;
 
 // Serial P1
-// TODO: Remove Debug Print Statements
 int serialP1(){
     double fMatrix [MATRIXSIZE][MATRIXSIZE];
     int count = 0;
@@ -32,20 +31,52 @@ int serialP1(){
     return 1;
 }
 
+__global__ void parallelP1(float *x, float *y, float *s, int matSize){
+    // This will init array and compute all the calculations
+    // Then copy the device memory over to host memory to read from
+    printf("Hello from the GPU!");
+}
+
 int main(){
 
     // Serial Way
     serialP1();
 
     // Parallel Way
-    // Pointers for our host and device
-    //int *h_a;
-    int *d_a;
+
+    // Device and Host Pointers
+    //int* h_a;
+    //int* d_a;
+
+    // Initialization?
+    // TODO: Move this to GPU
+    float *x, *y, *s;
+    float *d_x, *d_y, *d_s;
+    x = new float(MATRIXSIZE * MATRIXSIZE);
+    y = new float(MATRIXSIZE * MATRIXSIZE);
+    s = new float(MATRIXSIZE * MATRIXSIZE);
+
+    // Thread Hierarchy
+    int nblocks = 4;
+    int tpb = 512;
+
+    // Allocate device memory
     size_t memSize;
+    memSize = MATRIXSIZE * MATRIXSIZE * sizeof(float);
+    cudaMalloc((void**) &d_x, memSize);
+    cudaMalloc((void**) &d_y, memSize);
+    cudaMalloc((void**) &d_s, memSize);
 
-    memSize = 30;
-    cudaMalloc((void**) &d_a, memSize);
+    // Initialize memory to device
+    // TODO: Do this in GPU
+    cudaMemcpy(d_x, x, memSize, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_y, y, memSize, cudaMemcpyHostToDevice);
 
-    // parallel
+    // First we need to build our dims
+    dim3 dimGrid(nblocks);
+    dim3 dimBlock(tpb);
+
+    // Launch Kernal
+    parallelP1<<<dimGrid, dimBlock>>>(d_x, d_y, d_s, MATRIXSIZE);
 
 }
