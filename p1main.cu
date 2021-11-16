@@ -31,13 +31,13 @@ int serialP1(){
     return 1;
 }
 
-__global__ void parallelP1(double *x, double *y, int matSize){
+__global__ void parallelP1(double *x, double *y){
     // This will init array and compute all the calculations
     // Then copy the device memory over to host memory to read from
     printf("Hello from the GPU!");
 
     // Matrix
-    double fMatrix [matSize][matSize];
+    double fMatrix [MATRIXSIZE][MATRIXSIZE];
 
     // Initialize memory
     int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -78,7 +78,7 @@ int main(){
     dim3 dimBlock(tpb);
 
     // Launch Kernal
-    parallelP1<<<dimGrid, dimBlock>>>(d_x, d_y, MATRIXSIZE);
+    parallelP1<<<dimGrid, dimBlock>>>(d_x, d_y);
 
     cudaMemcpy(x, d_x, memSize, cudaMemcpyDeviceToHost);
     cudaMemcpy(y, d_y, memSize, cudaMemcpyDeviceToHost);
