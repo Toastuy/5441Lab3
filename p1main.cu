@@ -31,10 +31,13 @@ int serialP1(){
     return 1;
 }
 
-__global__ void parallelP1(float *x, float *y, int matSize){
+__global__ void parallelP1(double *x, double *y, int matSize){
     // This will init array and compute all the calculations
     // Then copy the device memory over to host memory to read from
     printf("Hello from the GPU!");
+
+    // Matrix
+    double fMatrix [matSize][matSize];
 
     // Initialize memory
     int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -50,10 +53,10 @@ int main(){
     // Parallel Way
 
     // Allocation
-    float *x, *y;
-    float *d_x, *d_y;
-    x = new float(MATRIXSIZE * MATRIXSIZE);
-    y = new float(MATRIXSIZE * MATRIXSIZE);
+    double *x, *y;
+    double *d_x, *d_y;
+    x = new double(MATRIXSIZE * MATRIXSIZE);
+    y = new double(MATRIXSIZE * MATRIXSIZE);
 
     // Thread Hierarchy
     int nblocks = 4;
@@ -61,7 +64,7 @@ int main(){
 
     // Allocate device memory
     size_t memSize;
-    memSize = MATRIXSIZE * MATRIXSIZE * sizeof(float);
+    memSize = MATRIXSIZE * MATRIXSIZE * sizeof(double);
     cudaMalloc((void**) &d_x, memSize);
     cudaMalloc((void**) &d_y, memSize);
 
