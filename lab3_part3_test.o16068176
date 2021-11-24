@@ -1,0 +1,7 @@
+job started at Wed Nov 24 11:42:20 EST 2021
+on compute node o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733 o0733
+GPUassert: an illegal memory access was encountered part3/part3.cu 108
+
+real	0m1.232s
+user	0m0.169s
+sys	0m0.252s

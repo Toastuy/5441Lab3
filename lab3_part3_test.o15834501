@@ -1,0 +1,7 @@
+job started at Sun Nov 21 16:53:05 EST 2021
+on compute node o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649 o0649
+GPUassert: an illegal memory access was encountered part3/part3.cu 107
+
+real	0m2.574s
+user	0m0.084s
+sys	0m1.540s
