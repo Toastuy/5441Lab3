@@ -20,48 +20,38 @@ __global__ void Device_Part_2(float *A, float *B, float *C, int dim);
 
 int main() {
   unsigned long flops = 0;
-  time_t serialStart;
-  time_t serialFinish;
+  time_t start;
+  time_t finish;
 
 
   // Perform serial version
-  time(&serialStart);
-  flops = serial_part_2();
-  time(&serialFinish);
+  time(&start);
+  //flops = serial_part_2();
+  time(&finish);
 
-  printf("%d\n", serialFinish - serialStart);
+  printf("Flops: %lu\n", flops);
 
+  time(&start);
   flops = cuda_part_2();
+  time(&finish);
+
+  printf("Flops: %lu\n", flops);
 
   return 0;
 }
 
 unsigned long serial_part_2() {
-  float **A, **B, **C;
-  float *row_ptr_helper_A;
-  float *row_ptr_helper_B;
-  float *row_ptr_helper_C;
-  A = (float **) malloc(MATRIX_DIM * sizeof(float *) + MATRIX_DIM * MATRIX_DIM * sizeof(float));
-  B = (float **) malloc(MATRIX_DIM * sizeof(float *) + MATRIX_DIM * MATRIX_DIM * sizeof(float));
-  C = (float **) malloc(MATRIX_DIM * sizeof(float *) + MATRIX_DIM * MATRIX_DIM * sizeof(float));
-
-  row_ptr_helper_A = (float *)(A + MATRIX_DIM);
-  row_ptr_helper_B = (float *)(B + MATRIX_DIM);
-  row_ptr_helper_C = (float *)(C + MATRIX_DIM);
-
-  // Point row pointers to appropriate locations
-  for (int i = 0; i < MATRIX_DIM; i++) {
-    A[i] = (row_ptr_helper_A + MATRIX_DIM * i);
-    B[i] = (row_ptr_helper_B + MATRIX_DIM * i);
-    C[i] = (row_ptr_helper_C + MATRIX_DIM * i);
-  }
+  float *A, *B, *C;
+  A = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
+  B = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
+  C = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
 
   unsigned long flops = 0;
   // Initialize matrices for serial version
   for (int i = 0; i < MATRIX_DIM; i++) {
     for (int j = 0; j < MATRIX_DIM; j++) {
-      A[i][j] = (float) rand() / RAND_MAX + 1;
-      B[i][j] = (float) rand() / RAND_MAX + 1;
+      A[i * MATRIX_DIM + j] = (float) rand() / RAND_MAX + 1;
+      B[i * MATRIX_DIM + j] = (float) rand() / RAND_MAX + 1;
       flops++;
     }
   }
@@ -70,10 +60,10 @@ unsigned long serial_part_2() {
   for (int i = 0; i < MATRIX_DIM; i++) {
     for (int j = 0; j < MATRIX_DIM; j++) {
       for (int k = 0; k < MATRIX_DIM; k++) {
-        sum += A[i][k] * B[k][j];
+        sum += A[i * MATRIX_DIM + k] * B[k * MATRIX_DIM + j];
         flops++;
       }
-      C[i][j] = sum;
+      C[i * MATRIX_DIM + j] = sum;
       sum = 0;
     }
   }
@@ -91,51 +81,44 @@ unsigned long cuda_part_2() {
   int numBlocks = 8;
   int threadsPerBlock = 512;
 
-  curandState *random;
-
   size_t matrix_mem_size;
   matrix_mem_size = MATRIX_DIM * MATRIX_DIM * sizeof(float *);
 
-  cudaMalloc((void**) &d_A, matrix_mem_size);
-  cudaMalloc((void**) &d_B, matrix_mem_size);
-  cudaMalloc((void**) &d_C, matrix_mem_size);
+  gpuErrchk(cudaMalloc((void**) &d_A, matrix_mem_size));
+  gpuErrchk(cudaMalloc((void**) &d_B, matrix_mem_size));
+  gpuErrchk(cudaMalloc((void**) &d_C, matrix_mem_size));
 
 
   dim3 dimGrid(numBlocks);
   dim3 dimBlock(threadsPerBlock);
-
   Device_Part_2<<< dimGrid, dimBlock >>>(d_A, d_B, d_C, MATRIX_DIM);
   gpuErrchk(cudaPeekAtLastError());
   gpuErrchk(cudaDeviceSynchronize())
   cudaMemcpy(h_C, d_C, matrix_mem_size, cudaMemcpyDeviceToHost);
   
-  printf("%f\n", h_C[24]);
+  printf("%f\n", h_C[22]);
   return flops;
 }
 
 __global__ void Device_Part_2(float *A, float *B, float *C, int dim) {
     
     float sum;
-
-    // TODO: Init with CuRand
-    // int i = threadIdx.x;
-    // for (int j = blockIdx.x; j < dim; j += gridDim.x) {
-    //   A[i * dim + j] = 1.5;
-    //   B[i * dim + j] = 1.7;
-    // }
-
+    curandState state;
 
     int row = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int j = 0; j < dim; j++) {
       for (int k = 0; k < dim; k++) {
-        A[row * dim + k] = 1.5;
-        B[k * dim + j] = 1.7;
+        curand_init(0, row, row * dim + k, &state);
+        float a_rand = curand_uniform(&state);
+        curand_init(0, row, k * dim + j, &state);
+        float b_rand = curand_uniform(&state);
+        A[row * dim + k] = a_rand + 1;
+        B[k * dim + j] = b_rand + 1;
       }
     }
 
 
-    // TODO: Adjust for 4096 dim
     for (int j = 0; j < dim; j++) {
       sum = 0;
       for (int k = 0; k < dim; k++) {
