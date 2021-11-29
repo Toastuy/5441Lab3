@@ -1,11 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <curand.h>
+#include <curand_kernel.h>
 #include <time.h>
-#define MATRIX_DIM 12
-#define NUM_THREADS 10
 
-unsigned long serial_part_2(float **A, float **B, float **C);
-void cuda_part_2();
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+  if (code != cudaSuccess) {
+    fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+    if (abort) exit(code);
+  }
+}
+#define MATRIX_DIM 4096
+
+unsigned long serial_part_2();
+unsigned long cuda_part_2();
+__global__ void Device_Part_2(float *A, float *B, float *C, int dim);
 
 
 int main() {
@@ -13,6 +23,20 @@ int main() {
   time_t serialStart;
   time_t serialFinish;
 
+
+  // Perform serial version
+  time(&serialStart);
+  flops = serial_part_2();
+  time(&serialFinish);
+
+  printf("%d\n", serialFinish - serialStart);
+
+  flops = cuda_part_2();
+
+  return 0;
+}
+
+unsigned long serial_part_2() {
   float **A, **B, **C;
   float *row_ptr_helper_A;
   float *row_ptr_helper_B;
@@ -32,22 +56,6 @@ int main() {
     C[i] = (row_ptr_helper_C + MATRIX_DIM * i);
   }
 
-  // Perform serial version
-  time(&serialStart);
-  flops = serial_part_2(A, B, C);
-  time(&serialFinish);
-  printf("FLOPS: %d\n C[00]: %f\n", flops, C[0][0]);
-
-  printf("%d\n", serialFinish - serialStart);
-
-  free(A);
-  free(B);
-  free(C);
-
-  return 0;
-}
-
-unsigned long serial_part_2(float **A, float **B, float **C) {
   unsigned long flops = 0;
   // Initialize matrices for serial version
   for (int i = 0; i < MATRIX_DIM; i++) {
@@ -69,9 +77,71 @@ unsigned long serial_part_2(float **A, float **B, float **C) {
       sum = 0;
     }
   }
+
+  free(A);
+  free(B);
+  free(C);
   return flops;
 }
 
-void cuda_part_2() {
+unsigned long cuda_part_2() {
+  unsigned long flops = 0;
+  float *d_A, *d_B, *d_C;
+  float *h_C = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
+  int numBlocks = 8;
+  int threadsPerBlock = 512;
+
+  curandState *random;
+
+  size_t matrix_mem_size;
+  matrix_mem_size = MATRIX_DIM * MATRIX_DIM * sizeof(float *);
+
+  cudaMalloc((void**) &d_A, matrix_mem_size);
+  cudaMalloc((void**) &d_B, matrix_mem_size);
+  cudaMalloc((void**) &d_C, matrix_mem_size);
+
+
+  dim3 dimGrid(numBlocks);
+  dim3 dimBlock(threadsPerBlock);
+
+  Device_Part_2<<< dimGrid, dimBlock >>>(d_A, d_B, d_C, MATRIX_DIM);
+  gpuErrchk(cudaPeekAtLastError());
+  gpuErrchk(cudaDeviceSynchronize())
+  cudaMemcpy(h_C, d_C, matrix_mem_size, cudaMemcpyDeviceToHost);
+  
+  printf("%f\n", h_C[24]);
+  return flops;
+}
+
+__global__ void Device_Part_2(float *A, float *B, float *C, int dim) {
+    
+    float sum;
+
+    // TODO: Init with CuRand
+    // int i = threadIdx.x;
+    // for (int j = blockIdx.x; j < dim; j += gridDim.x) {
+    //   A[i * dim + j] = 1.5;
+    //   B[i * dim + j] = 1.7;
+    // }
+
+
+    int row = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int j = 0; j < dim; j++) {
+      for (int k = 0; k < dim; k++) {
+        A[row * dim + k] = 1.5;
+        B[k * dim + j] = 1.7;
+      }
+    }
+
+
+    // TODO: Adjust for 4096 dim
+    for (int j = 0; j < dim; j++) {
+      sum = 0;
+      for (int k = 0; k < dim; k++) {
+        sum += A[row * dim + k] * B[k * dim + j];
+      }
+      C[row * dim + j] = sum;
+    }
 
 }
