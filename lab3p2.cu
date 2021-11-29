@@ -16,6 +16,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 unsigned long serial_part_2();
 unsigned long cuda_part_2();
 __global__ void Device_Part_2(float *A, float *B, float *C, int dim);
+__global__ void Initialize_Arrays_Part_2(float *A, float *B, int dim);
 
 
 int main() {
@@ -77,9 +78,11 @@ unsigned long serial_part_2() {
 unsigned long cuda_part_2() {
   unsigned long flops = 0;
   float *d_A, *d_B, *d_C;
+  float *h_A = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
+  float *h_B = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
   float *h_C = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
-  int numBlocks = 8;
-  int threadsPerBlock = 512;
+  int numBlocks = 256;
+  int threadsPerBlock = 256;
 
   size_t matrix_mem_size;
   matrix_mem_size = MATRIX_DIM * MATRIX_DIM * sizeof(float *);
@@ -89,42 +92,57 @@ unsigned long cuda_part_2() {
   gpuErrchk(cudaMalloc((void**) &d_C, matrix_mem_size));
 
 
-  dim3 dimGrid(numBlocks);
+  dim3 dimGrid(numBlocks, numBlocks);
   dim3 dimBlock(threadsPerBlock);
+
+  // Initialize arrays on GPU
+  Initialize_Arrays_Part_2<<< dimGrid, dimBlock >>>(d_A, d_B, MATRIX_DIM);
+  gpuErrchk(cudaPeekAtLastError());
+  gpuErrchk(cudaDeviceSynchronize());
+  gpuErrchk(cudaMemcpy(h_A, d_A, matrix_mem_size, cudaMemcpyDeviceToHost));
+  gpuErrchk(cudaMemcpy(h_B, d_B, matrix_mem_size, cudaMemcpyDeviceToHost));
+
+  // Pass initialized array and output array to matrix multiply funciton
   Device_Part_2<<< dimGrid, dimBlock >>>(d_A, d_B, d_C, MATRIX_DIM);
   gpuErrchk(cudaPeekAtLastError());
-  gpuErrchk(cudaDeviceSynchronize())
-  cudaMemcpy(h_C, d_C, matrix_mem_size, cudaMemcpyDeviceToHost);
+  gpuErrchk(cudaDeviceSynchronize());
+  gpuErrchk(cudaMemcpy(h_C, d_C, matrix_mem_size, cudaMemcpyDeviceToHost));
   
+  cudaFree(d_A);
+  cudaFree(d_B);
+  cudaFree(d_C);
   printf("%f\n", h_C[22]);
   return flops;
 }
 
+__global__ void Initialize_Arrays_Part_2(float *A, float *B, int dim) {
+    // Get global linearized thread ID
+    int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+    int threadId = blockId * blockDim.x + threadIdx.x;
+
+    // Get specific element assigned to thread
+    int column = threadId % dim;
+    int row = threadId / dim;
+
+    // Each thread initializes a single element in each array
+    A[row * dim + column] = 1.2;
+    B[row * dim + column] = 1.3;
+}
+
 __global__ void Device_Part_2(float *A, float *B, float *C, int dim) {
-    
-    float sum;
-    curandState state;
 
-    int row = threadIdx.x + blockIdx.x * blockDim.x;
+    int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+    int threadId = blockId * blockDim.x + threadIdx.x;
 
+    // Get specified row and column item to compute
+    int column = threadId % dim;
+    int row = threadId / dim;
+
+    // Multiply each row and column element to get computed C value
+    float sum = 0;
     for (int j = 0; j < dim; j++) {
-      for (int k = 0; k < dim; k++) {
-        curand_init(0, row, row * dim + k, &state);
-        float a_rand = curand_uniform(&state);
-        curand_init(0, row, k * dim + j, &state);
-        float b_rand = curand_uniform(&state);
-        A[row * dim + k] = a_rand + 1;
-        B[k * dim + j] = b_rand + 1;
-      }
+      sum += A[row * dim + j] * B[j * dim + column];
     }
-
-
-    for (int j = 0; j < dim; j++) {
-      sum = 0;
-      for (int k = 0; k < dim; k++) {
-        sum += A[row * dim + k] * B[k * dim + j];
-      }
-      C[row * dim + j] = sum;
-    }
+    C[row * dim + column] = sum;
 
 }
