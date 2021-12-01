@@ -37,13 +37,14 @@ __global__ void InplaceTranspose(int *mat, int mat_dim, int cells_per_tile_x, in
             }
         }
     }
-    printf("Thread #%d Operations: %d\n", x, count);
-
 }
 
-int main() {
-    int n_blocks = 2;
-    int threads_pb = 1024;
+__host__ void Transpose(int blocks, int threads) {
+    int n_blocks = blocks;
+    int threads_pb = threads;
+
+    printf("---------------------------------------------------------------------------\n");
+    printf("Test %d block with %d threads\n", n_blocks, threads_pb);
 
     int* device_mat;
 
@@ -55,9 +56,10 @@ int main() {
 
     // Total mat dim and tile dim 
     int mat_dim = 1024;
+    
+    // Used for workload distribution in kernel
     int cells_per_tile_x = (int)ceil(sqrt((double)(mat_dim*mat_dim)/(n_blocks * pow(floor(sqrt(threads_pb)), 2))));
     int tiles_per_grid_x = ceil((double)mat_dim/cells_per_tile_x);
-    printf("Matrix dim: %d, Cells per tile rounded: %d, tiles per grid rounded: %d\n", mat_dim, cells_per_tile_x, tiles_per_grid_x);
 
     host_mat = new int[mat_dim*mat_dim];
     host_mat_copy = new int[mat_dim*mat_dim];
@@ -79,23 +81,34 @@ int main() {
     // Launch kernel
     dim3 dimGrid(n_blocks);
     dim3 dimBlock(threads_pb);
-
-    auto start = std::chrono::high_resolution_clock::now();    
     
+    // Set up events for kernel execution timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Start event
+    cudaEventRecord(start);
+
     InplaceTranspose<<<dimGrid, dimBlock>>>(device_mat, mat_dim, cells_per_tile_x, tiles_per_grid_x);
     gpuErrchk(cudaGetLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
-    auto end = std::chrono::high_resolution_clock::now(); 
+    // Stop event
+    cudaEventRecord(stop);
 
-    printf("Transpose time: %ld:%02ld\n", (start-end)/60, (start-end)%60);
+    // Get transpose time in ms
+    cudaEventSynchronize(stop);
+    float transposeTime = 0;
+    cudaEventElapsedTime(&transposeTime, start, stop);
+
+    printf("Transpose time: %f ms\n", transposeTime);
 
     // Retrieve results
     cudaMemcpy(host_mat, device_mat, memSize, cudaMemcpyDeviceToHost);
     
-
     // Checking result
-    
+    printf("Check transpose against original matrix transpose\n");
     int total = 0;
     int correct = 0;
     for (int i = 0; i < mat_dim; i++) {
@@ -112,7 +125,18 @@ int main() {
         }
     }
 
-    printf("%d Correct / %d Total", correct, total);
+    printf("%d Matching Elements / %d Total Elements\n", correct, total);
+    printf("---------------------------------------------------------------------------\n");
+
+    cudaFree(device_mat);
+}
+
+int main() {
+    
+    Transpose(1, 32);
+    Transpose(1, 1024);
+    Transpose(2, 1024);
+    Transpose(64, 1024);
 
     return 0;
 }
