@@ -20,23 +20,21 @@ __global__ void Initialize_Arrays_Part_2(float *A, float *B, int dim);
 
 
 int main() {
-  unsigned long flops = 0;
+  unsigned long flopsPerSecond = 0;
   time_t start;
   time_t finish;
 
 
   // Perform serial version
   time(&start);
-  //flops = serial_part_2();
+  //flopsPerSecond = serial_part_2();
   time(&finish);
 
-  printf("Flops: %lu\n", flops);
+  //printf("Serial Flops Per Second: %lu\n", flopsPerSecond / (finish - start));
 
-  time(&start);
-  flops = cuda_part_2();
-  time(&finish);
+  flopsPerSecond = cuda_part_2();
 
-  printf("Flops: %lu\n", flops);
+  printf("Cuda Flops Per Second: %lu\n", flopsPerSecond);
 
   return 0;
 }
@@ -76,7 +74,8 @@ unsigned long serial_part_2() {
 }
 
 unsigned long cuda_part_2() {
-  unsigned long flops = 0;
+  unsigned long flops = MATRIX_DIM * MATRIX_DIM;
+  unsigned long flopsPerSecond;
   float *d_A, *d_B, *d_C;
   float *h_A = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
   float *h_B = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
@@ -102,17 +101,32 @@ unsigned long cuda_part_2() {
   gpuErrchk(cudaMemcpy(h_A, d_A, matrix_mem_size, cudaMemcpyDeviceToHost));
   gpuErrchk(cudaMemcpy(h_B, d_B, matrix_mem_size, cudaMemcpyDeviceToHost));
 
-  // Pass initialized array and output array to matrix multiply funciton
+  // Pass initialized array and output array to matrix multiply funciton and record instrumentation
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  cudaEventRecord(start);
   Device_Part_2<<< dimGrid, dimBlock >>>(d_A, d_B, d_C, MATRIX_DIM);
+  cudaEventRecord(stop);
   gpuErrchk(cudaPeekAtLastError());
   gpuErrchk(cudaDeviceSynchronize());
   gpuErrchk(cudaMemcpy(h_C, d_C, matrix_mem_size, cudaMemcpyDeviceToHost));
   
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+
   cudaFree(d_A);
   cudaFree(d_B);
   cudaFree(d_C);
-  printf("%f\n", h_C[22]);
-  return flops;
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+
+  printf("Time Millis: %f\n", milliseconds);
+  
+  flopsPerSecond = flops / (milliseconds / 1000);
+
+  return flopsPerSecond;
 }
 
 __global__ void Initialize_Arrays_Part_2(float *A, float *B, int dim) {
@@ -124,9 +138,18 @@ __global__ void Initialize_Arrays_Part_2(float *A, float *B, int dim) {
     int column = threadId % dim;
     int row = threadId / dim;
 
+    curandState state1;
+    curand_init(0, threadId, 0, &state1);
+    float a_rand = curand_uniform(&state1) + 1;
+
+    curandState state2;
+    curand_init(0, threadId, 1, &state2);
+    float b_rand = curand_uniform(&state2) + 1;
+
     // Each thread initializes a single element in each array
-    A[row * dim + column] = 1.2;
-    B[row * dim + column] = 1.3;
+    A[row * dim + column] = a_rand;
+    B[row * dim + column] = b_rand;
+
 }
 
 __global__ void Device_Part_2(float *A, float *B, float *C, int dim) {
