@@ -47,9 +47,7 @@ unsigned long serialP1(){
 __global__ void cudaP1(double *A, int matrixDimension){
 
     // TODO: Remove, checking to make sure I'm on the GPU at Owens
-    printf("Hello from the GPU!");
 
-    // Get our thread ID
     int blockId = blockIdx.y * gridDim.x + blockIdx.x;
     int threadId = blockId * blockDim.x + threadIdx.x;
 
@@ -59,7 +57,23 @@ __global__ void cudaP1(double *A, int matrixDimension){
 
     // Initialize each element of the array to our equations
     // (i + j) / (double) 4000
-    A[row][column] = ((row + column) / (double) 4000);
+    A[row * matrixDimension + column] = ((row + column) / (double) 4000);
+}
+
+__global__ void cudaP1_work(double *A, int matrixDimension){
+
+    // TODO: Remove, checking to make sure I'm on the GPU at Owens
+
+    int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+    int threadId = blockId * blockDim.x + threadIdx.x;
+
+    // Get specific element assigned to thread
+    int column = threadId % matrixDimension;
+    int row = threadId / matrixDimension;
+
+    if (row != 0 && column != matrixDimension - 1) {
+        A[row * matrixDimension + column] = A[(row - 1) * matrixDimension + column + 1] + A[row * matrixDimension + column + 1];
+    }
 }
 
 unsigned long parallelP1(){
@@ -74,7 +88,7 @@ unsigned long parallelP1(){
 
     // Cuda memory block stuff
     int numOfBlocks = 4;
-    int threadsPerBlock = 512;
+    int threadsPerBlock = 500;
 
     // Declare the size of our matrix
     size_t matrixMemSize;
@@ -84,11 +98,14 @@ unsigned long parallelP1(){
     gpuErrchk(cudaMalloc((void**) &d_A, matrixMemSize));
 
     // Get our dims for our cuda func call
-    dim3 dimGrid(numOfBlocks);
+    dim3 dimGrid(numOfBlocks, numOfBlocks);
     dim3 dimBlock(threadsPerBlock);
 
     // Call our cuda function to initialize the array and do our work
     cudaP1<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
+
+     // Call our cuda function to initialize the array and do our work
+    cudaP1_work<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
     
     // Error checking goes here
 
@@ -99,17 +116,7 @@ unsigned long parallelP1(){
     gpuErrchk(cudaFree(d_A));
 
     // Print the second element of every fourth row
-    for (int i = 0; i < MATRIXSIZE; i += 4){
-        // Check for our edge case first
-        if (i == MATRIXSIZE - 4){
-            printf("%f\n", h_A[i][1]);
-            printf("%f\n", h_A[MATRIXSIZE - 1][1]);
-        } 
-        // If I'm not an edge case, just print the element and move on
-        else {
-            printf("%f\n", h_A[i][1]);
-        }
-    }
+    printf("%f\n", h_A[4000]);
 
     return numOfParallelFlops;
 }
