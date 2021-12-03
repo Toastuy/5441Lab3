@@ -18,29 +18,41 @@ unsigned long serialP1(){
 
     double fMatrix [MATRIXSIZE][MATRIXSIZE];
     unsigned long numOfSerialFlops = 0;
-    int count = 0;
 
+    // Initialize every value of the matrix
     for(int i = 0; i < MATRIXSIZE; i++){
         for(int j = 0; j < MATRIXSIZE; j++){
-            // Initialize every value of the matrix
             fMatrix[i][j] = (double) (i + j) / (double) MATRIXSIZE;
+            numOfSerialFlops++;
         }
     }
 
-    for (int i = 0; i < MATRIXSIZE; i += 4){
-        // Check for our edge case first
-        if (i == MATRIXSIZE - 4){
-            count += 2;
-            printf("%f\n", fMatrix[i][1]);
-            printf("%f\n", fMatrix[MATRIXSIZE - 1][1]);
-        } 
-        // If I'm not an edge case, just print the element and move on
-        else {
-            count++;
-            printf("%f\n", fMatrix[i][1]);
+    // Do our work
+    for (int i = 0; i < MATRIXSIZE; i++){
+        for (int j = 0; j < MATRIXSIZE; j++){
+            // Redundant, can set for loop boundaries but this is self documenting
+            // Check for our border conditions
+            if (i != 0 && j != MATRIXSIZE - 1){
+                fMatrix[i][j] = fMatrix[i - 1][j + 1] + fMatrix[i][j + 1];
+                numOfSerialFlops++;
+            }
         }
     }
-    printf("Total # Of Items: %d \n", count);
+
+    // This is for printing the serial values, not needed by project
+    // for (int i = 0; i < MATRIXSIZE; i += 4){
+    //     // Check for our edge case first
+    //     if (i == MATRIXSIZE - 4){
+    //         count += 2;
+    //         printf("%f\n", fMatrix[i][1]);
+    //         printf("%f\n", fMatrix[MATRIXSIZE - 1][1]);
+    //     } 
+    //     // If I'm not an edge case, just print the element and move on
+    //     else {
+    //         count++;
+    //         printf("%f\n", fMatrix[i][1]);
+    //     }
+    // }
     return numOfSerialFlops;
 }
 
@@ -62,8 +74,7 @@ __global__ void cudaP1(double *A, int matrixDimension){
 
 __global__ void cudaP1_work(double *A, int matrixDimension){
 
-    // TODO: Remove, checking to make sure I'm on the GPU at Owens
-
+    // Get our block and thread IDs
     int blockId = blockIdx.y * gridDim.x + blockIdx.x;
     int threadId = blockId * blockDim.x + threadIdx.x;
 
@@ -79,8 +90,15 @@ __global__ void cudaP1_work(double *A, int matrixDimension){
 unsigned long parallelP1(){
 
     // Allocation
-    // Flops
-    unsigned long numOfParallelFlops = 0;
+    // Flops: Initialization has MATRIXSIZE^2 amount of flops
+    // Work has MATRIXSIZE^2 - (MATRIXSIZE * 2) amount of flops
+    // Hard coded to avoid moving unnecessary data to our device
+    unsigned long flops = (MATRIXSIZE * MATRIXSIZE) + (MATRIXSIZE * MATRIXSIZE) - (MATRIXSIZE * 2);
+    unsigned long flopsPerSecond;
+    cudaEvent_t start, stop;
+    float milliseconds = 0;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
     // Spaces in memory
     double *d_A;
@@ -102,10 +120,19 @@ unsigned long parallelP1(){
     dim3 dimBlock(threadsPerBlock);
 
     // Call our cuda function to initialize the array and do our work
+    // Measure the flops for this part as well, specified in write up
+    cudaEventRecord(start);
     cudaP1<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
 
-     // Call our cuda function to initialize the array and do our work
+     // Call our cuda function to do our work
+     // End the event so we can measure flops
     cudaP1_work<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
+    cudaEventRecord(stop);
+
+    // Timing stuff
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    printf("Total Time for CUDA in MS: %f/n", milliseconds);
+    flopsPerSecond = flops / (milliseconds / 1000);
     
     // Error checking goes here
 
@@ -116,29 +143,31 @@ unsigned long parallelP1(){
     gpuErrchk(cudaFree(d_A));
 
     // Print the second element of every fourth row
-    printf("%f\n", h_A[4000]);
+    //printf("%f\n", h_A[4000]);
 
-    return numOfParallelFlops;
+    return flopsPerSecond;
 }
 
 int main(){
 
     // Timing and flop stuff
     unsigned long serialFlops = 0;
-    unsigned long parallelFlops = 0;
-    time_t start;
-    time_t finish;
+    unsigned long serialFlopsPerSecond = 0;
+    unsigned long parallelFlopsPerSecond = 0;
+    double serialTime = 0.0;
+    clock_t start;
+    clock_t finish;
 
     // Serial Way
-    time(&start);
+    start = clock();
     serialFlops = serialP1();
-    time(&finish);
-    printf("Number of Serial Flops: %lu\n", serialFlops);
+    finish = clock();
+    serialTime = ((double) (finish - start)) / CLOCKS_PER_SEC;
+    serialFlopsPerSecond = serialFlops / serialTime;
+    printf("Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
 
     // Parallel Way
-    time(&start);
-    parallelFlops = parallelP1();
-    time(&finish);
-    printf("Number of Parallel Flops: %lu\n", parallelFlops);
+    parallelFlopsPerSecond = parallelP1();
+    printf("Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
     
 }
