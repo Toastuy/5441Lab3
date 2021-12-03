@@ -95,10 +95,13 @@ unsigned long parallelP1(){
     // Hard coded to avoid moving unnecessary data to our device
     unsigned long flops = (MATRIXSIZE * MATRIXSIZE) + (MATRIXSIZE * MATRIXSIZE) - (MATRIXSIZE * 2);
     unsigned long flopsPerSecond;
-    cudaEvent_t start, stop;
+    cudaEvent_t start, stop, start2, stop2;
     float milliseconds = 0;
+    float milliseconds2 = 0;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
+    cudaEventCreate(&start2);
+    cudaEventCreate(&stop2);
 
     // Spaces in memory
     double *d_A;
@@ -123,15 +126,19 @@ unsigned long parallelP1(){
     // Measure the flops for this part as well, specified in write up
     cudaEventRecord(start);
     cudaP1<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
-
-     // Call our cuda function to do our work
-     // End the event so we can measure flops
-    cudaP1_work<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
     cudaEventRecord(stop);
+
+    // Call our cuda function to do our work
+    cudaEventRecord(start2);
+    cudaP1_work<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
+    cudaEventRecord(stop2);
 
     // Timing stuff
     cudaEventElapsedTime(&milliseconds, start, stop);
-    printf("Total Time for CUDA in MS: %f/n", milliseconds);
+    cudaEventElapsedTime(&milliseconds2, start2, stop2);
+    milliseconds += milliseconds2;
+    
+    printf("Total Time for CUDA in MS: %f\n", milliseconds);
     flopsPerSecond = flops / (milliseconds / 1000);
     
     // Error checking goes here
@@ -162,12 +169,15 @@ int main(){
     start = clock();
     serialFlops = serialP1();
     finish = clock();
-    serialTime = ((double) (finish - start)) / CLOCKS_PER_SEC;
+    
+    serialTime = (double) (finish - start) / CLOCKS_PER_SEC;
+    printf("Total Time for Serial in S: %lf\n", serialTime);
+    
     serialFlopsPerSecond = serialFlops / serialTime;
     printf("Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
 
     // Parallel Way
     parallelFlopsPerSecond = parallelP1();
-    printf("Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
+    printf("Number of Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
     
 }
