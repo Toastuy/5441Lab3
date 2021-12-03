@@ -146,11 +146,20 @@ unsigned long parallelP1(){
     // Copy our memory back over to the host
     gpuErrchk(cudaMemcpy(h_A, d_A, matrixMemSize, cudaMemcpyDeviceToHost));
 
+    // Print the second element of every fourth row
+    for (int i = 0; i < MATRIXSIZE; i+= 4){
+        
+        // i is row, multiply it by matrix size to get out access stride
+        // add one to get the 2nd column
+        printf("%lf\n", h_A[i + 1]);
+        
+        if (i == 3996){
+            printf("%lf\n", h_A[(i + 3) * MATRIXSIZE + 1]);
+        }
+    }
+    
     // Free our memory
     gpuErrchk(cudaFree(d_A));
-
-    // Print the second element of every fourth row
-    //printf("%f\n", h_A[4000]);
 
     return flopsPerSecond;
 }
