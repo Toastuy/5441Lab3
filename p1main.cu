@@ -155,7 +155,7 @@ unsigned long parallelP1(){
         }
     }
 
-    printf("Total Time for CUDA in MS: %f\n", milliseconds);
+    fprintf(stderr, "Total Time for CUDA in MS: %f\n", milliseconds);
     flopsPerSecond = flops / (milliseconds / 1000);
     
     // Free our memory
@@ -183,9 +183,9 @@ int main(){
 
     // Parallel Way
     parallelFlopsPerSecond = parallelP1();
-    printf("Total Time for Serial in S: %lf\n", serialTime);
+    fprintf(stderr, "Total Time for Serial in S: %lf\n", serialTime);
     serialFlopsPerSecond = serialFlops / serialTime;
-    printf("Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
-    printf("Number of Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
+    fprintf(stderr, "Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
+    fprintf(stderr, "Number of Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
     
 }
