@@ -138,9 +138,6 @@ unsigned long parallelP1(){
     cudaEventElapsedTime(&milliseconds2, start2, stop2);
     milliseconds += milliseconds2;
     
-    printf("Total Time for CUDA in MS: %f\n", milliseconds);
-    flopsPerSecond = flops / (milliseconds / 1000);
-    
     // Error checking goes here
 
     // Copy our memory back over to the host
@@ -157,6 +154,9 @@ unsigned long parallelP1(){
             printf("%lf\n", h_A[(i + 3) * MATRIXSIZE + 1]);
         }
     }
+
+    printf("Total Time for CUDA in MS: %f\n", milliseconds);
+    flopsPerSecond = flops / (milliseconds / 1000);
     
     // Free our memory
     gpuErrchk(cudaFree(d_A));
