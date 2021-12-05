@@ -109,7 +109,7 @@ unsigned long parallelP1(){
 
     // Cuda memory block stuff
     int numOfBlocks = 4;
-    int threadsPerBlock = 500;
+    int threadsPerBlock = 1000;
 
     // Declare the size of our matrix
     size_t matrixMemSize;
