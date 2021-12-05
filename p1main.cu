@@ -151,7 +151,7 @@ unsigned long parallelP1(){
         printf("%lf\n", h_A[i + 1]);
         
         if (i == 3996){
-            printf("%lf\n", h_A[(i + 3) * MATRIXSIZE + 1]);
+            printf("%lf\n", h_A[(i + 3) + 1]);
         }
     }
 
