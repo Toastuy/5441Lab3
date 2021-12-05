@@ -60,31 +60,25 @@ __global__ void cudaP1(double *A, int matrixDimension){
 
     // TODO: Remove, checking to make sure I'm on the GPU at Owens
 
-    int blockId = blockIdx.y * gridDim.x + blockIdx.x;
-    int threadId = blockId * blockDim.x + threadIdx.x;
-
-    // Get specific element assigned to thread
-    int column = threadId % matrixDimension;
-    int row = threadId / matrixDimension;
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
 
     // Initialize each element of the array to our equations
     // (i + j) / (double) 4000
-    A[row * matrixDimension + column] = ((row + column) / (double) 4000);
+    for (int i = 0; i < matrixDimension; i++) {
+        A[x * matrixDimension + i] = ((x + i) / (double) 4000);
+    }
 }
 
 __global__ void cudaP1_work(double *A, int matrixDimension){
 
-    // Get our block and thread IDs
-    int blockId = blockIdx.y * gridDim.x + blockIdx.x;
-    int threadId = blockId * blockDim.x + threadIdx.x;
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
 
-    // Get specific element assigned to thread
-    int column = threadId % matrixDimension;
-    int row = threadId / matrixDimension;
-
-    if (row != 0 && column != matrixDimension - 1) {
-        A[row * matrixDimension + column] = A[(row - 1) * matrixDimension + column + 1] + A[row * matrixDimension + column + 1];
+    for (int i = 0; i < matrixDimension; i++) {
+        if (x != 0 && i != matrixDimension - 1) {
+            A[x * matrixDimension + i] = A[(x - 1) * matrixDimension + i + 1] + A[x * matrixDimension + i + 1];
+        }
     }
+    
 }
 
 unsigned long parallelP1(){
@@ -119,7 +113,7 @@ unsigned long parallelP1(){
     gpuErrchk(cudaMalloc((void**) &d_A, matrixMemSize));
 
     // Get our dims for our cuda func call
-    dim3 dimGrid(numOfBlocks, numOfBlocks);
+    dim3 dimGrid(numOfBlocks);
     dim3 dimBlock(threadsPerBlock);
 
     // Call our cuda function to initialize the array and do our work
@@ -128,17 +122,7 @@ unsigned long parallelP1(){
     cudaP1<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
     cudaEventRecord(stop);
 
-    // Call our cuda function to do our work
-    cudaEventRecord(start2);
-    cudaP1_work<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
-    cudaEventRecord(stop2);
-
-    // Timing stuff
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    cudaEventElapsedTime(&milliseconds2, start2, stop2);
-    milliseconds += milliseconds2;
-    
-    // Error checking goes here
+    printf("Post init check\n");
 
     // Copy our memory back over to the host
     gpuErrchk(cudaMemcpy(h_A, d_A, matrixMemSize, cudaMemcpyDeviceToHost));
@@ -155,7 +139,36 @@ unsigned long parallelP1(){
         }
     }
 
-    fprintf(stderr, "Total Time for CUDA in MS: %f\n", milliseconds);
+    // Call our cuda function to do our work
+    cudaEventRecord(start2);
+    cudaP1_work<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
+    cudaEventRecord(stop2);
+
+    // Timing stuff
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    cudaEventElapsedTime(&milliseconds2, start2, stop2);
+    milliseconds += milliseconds2;
+    
+    // Error checking goes here
+
+    printf("Post work check\n");
+
+    // Copy our memory back over to the host
+    gpuErrchk(cudaMemcpy(h_A, d_A, matrixMemSize, cudaMemcpyDeviceToHost));
+
+    // Print the second element of every fourth row
+    for (int i = 0; i < MATRIXSIZE; i+= 4){
+        
+        // i is row, multiply it by matrix size to get out access stride
+        // add one to get the 2nd column
+        printf("%lf\n", h_A[(i * MATRIXSIZE) + 1]);
+        
+        if (i == 3996){
+            printf("%lf\n", h_A[((i * MATRIXSIZE) + 3) + 1]);
+        }
+    }
+
+    fprintf(stderr, "Total Time for CUDA in S: %f\n", milliseconds/1000);
     flopsPerSecond = flops / (milliseconds / 1000);
     
     // Free our memory
