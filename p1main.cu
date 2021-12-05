@@ -180,13 +180,12 @@ int main(){
     finish = clock();
     
     serialTime = (double) (finish - start) / CLOCKS_PER_SEC;
-    printf("Total Time for Serial in S: %lf\n", serialTime);
-    
-    serialFlopsPerSecond = serialFlops / serialTime;
-    printf("Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
 
     // Parallel Way
     parallelFlopsPerSecond = parallelP1();
+    printf("Total Time for Serial in S: %lf\n", serialTime);
+    serialFlopsPerSecond = serialFlops / serialTime;
+    printf("Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
     printf("Number of Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
     
 }
