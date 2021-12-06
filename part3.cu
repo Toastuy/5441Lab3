@@ -41,7 +41,7 @@ __host__ void Transpose(int blocks, int threads) {
     int n_blocks = blocks;
     int threads_pb = threads;
 
-    printf("Test %d block with %d threads\n", n_blocks, threads_pb);
+    fprintf(stderr, "Test %d block with %d threads\n", n_blocks, threads_pb);
 
     int* device_mat;
 
@@ -99,13 +99,12 @@ __host__ void Transpose(int blocks, int threads) {
     float transposeTime = 0;
     cudaEventElapsedTime(&transposeTime, start, stop);
 
-    printf("Transpose time: %f ms\n", transposeTime);
+    fprintf(stderr, "Transpose time: %f ms\n", transposeTime);
 
     // Retrieve results
     gpuErrchk(cudaMemcpy(host_mat, device_mat, memSize, cudaMemcpyDeviceToHost));
     
     // Checking result
-    printf("Check transpose against original matrix transpose\n");
     int total = 0;
     int correct = 0;
     for (int i = 0; i < mat_dim; i++) {
@@ -117,13 +116,13 @@ __host__ void Transpose(int blocks, int threads) {
                 correct++;
             }
             else {
-                printf("Element (%d, %d) does NOT map to tranposed element (%d, %d)\n", i, j, j, i);
+                // fprintf(stderr, "Element (%d, %d) does NOT map to tranposed element (%d, %d)\n", i, j, j, i);
             }
         }
     }
 
-    printf("%d Matching Elements / %d Total Elements\n", correct, total);
-    printf("---------------------------------------------------------------------------\n");
+    fprintf(stderr, "Transpose: %d Correct Elements / %d Total Elements\n", correct, total);
+    fprintf(stderr, "---------------------------------------------------------------------------\n");
 
     cudaFree(device_mat);
 }
