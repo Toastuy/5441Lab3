@@ -31,8 +31,6 @@ __global__ void InplaceTranspose(int *mat, int mat_dim, int cells_per_tile_x, in
                 count++;
                 temp = mat[(i+init_i)*mat_dim + (j+init_j)];
                 mat[(i+init_i)*mat_dim + (j+init_j)] = mat[(j+init_j)*mat_dim + (i+init_i)];
-            }
-            if ((i+init_i)*mat_dim + (j+init_j) < mat_dim*mat_dim && (j+init_j)*mat_dim + (i+init_i) < mat_dim*mat_dim && (i + init_i) > (j + init_j)) {
                 mat[(j+init_j)*mat_dim + (i+init_i)] = temp;
             }
         }
@@ -43,7 +41,6 @@ __host__ void Transpose(int blocks, int threads) {
     int n_blocks = blocks;
     int threads_pb = threads;
 
-    printf("---------------------------------------------------------------------------\n");
     printf("Test %d block with %d threads\n", n_blocks, threads_pb);
 
     int* device_mat;
@@ -73,10 +70,10 @@ __host__ void Transpose(int blocks, int threads) {
 
     // Allocate on device 
     size_t memSize = mat_dim*mat_dim*sizeof(int);
-    cudaMalloc((void**)&device_mat, memSize);
+    gpuErrchk(cudaMalloc((void**)&device_mat, memSize));
 
     // Initialize on device
-    cudaMemcpy(device_mat, host_mat, memSize, cudaMemcpyHostToDevice);
+    gpuErrchk(cudaMemcpy(device_mat, host_mat, memSize, cudaMemcpyHostToDevice));
 
     // Launch kernel
     dim3 dimGrid(n_blocks);
@@ -105,7 +102,7 @@ __host__ void Transpose(int blocks, int threads) {
     printf("Transpose time: %f ms\n", transposeTime);
 
     // Retrieve results
-    cudaMemcpy(host_mat, device_mat, memSize, cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(host_mat, device_mat, memSize, cudaMemcpyDeviceToHost));
     
     // Checking result
     printf("Check transpose against original matrix transpose\n");
