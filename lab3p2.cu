@@ -30,11 +30,11 @@ int main() {
   //flopsPerSecond = serial_part_2();
   time(&finish);
 
-  //printf("Serial Flops Per Second: %lu\n", flopsPerSecond / (finish - start));
+  //fprintf(stderr, "Serial Flops Per Second: %lu\n", flopsPerSecond / (finish - start));
 
   flopsPerSecond = cuda_part_2();
 
-  printf("Cuda Flops Per Second: %lu\n", flopsPerSecond);
+  fprintf(stderr, "Cuda Flops Per Second: %lu\n", flopsPerSecond);
 
   return 0;
 }
@@ -91,6 +91,7 @@ unsigned long cuda_part_2() {
   gpuErrchk(cudaMalloc((void**) &d_C, matrix_mem_size));
 
 
+  // 2D 256x256 grid of blocks with 256 threads each -> Giving one thread per element of the 4096x4096 output matrix to calculate
   dim3 dimGrid(numBlocks, numBlocks);
   dim3 dimBlock(threadsPerBlock);
 
@@ -106,6 +107,7 @@ unsigned long cuda_part_2() {
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
+  // Time the cuda computations
   cudaEventRecord(start);
   Device_Part_2<<< dimGrid, dimBlock >>>(d_A, d_B, d_C, MATRIX_DIM);
   cudaEventRecord(stop);
@@ -122,7 +124,6 @@ unsigned long cuda_part_2() {
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
 
-  printf("Time Millis: %f\n", milliseconds);
   
   flopsPerSecond = flops / (milliseconds / 1000);
 
