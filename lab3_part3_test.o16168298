@@ -1,0 +1,10 @@
+job started at Sun Dec 5 18:28:28 EST 2021
+on compute node o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725 o0725
+Total Time for CUDA in MS: 0.046112
+Total Time for Serial in S: 0.210000
+Number of Serial Flops Per Second: 152342861
+Number of Parallel Flops Per Second: 693789065216
+
+real	0m0.441s
+user	0m0.228s
+sys	0m0.186s
