@@ -122,22 +122,22 @@ unsigned long parallelP1(){
     cudaP1<<<dimGrid, dimBlock>>>(d_A, MATRIXSIZE);
     cudaEventRecord(stop);
 
-    printf("Post init check\n");
+    //printf("Post init check\n");
 
     // Copy our memory back over to the host
     gpuErrchk(cudaMemcpy(h_A, d_A, matrixMemSize, cudaMemcpyDeviceToHost));
 
     // Print the second element of every fourth row
-    for (int i = 0; i < MATRIXSIZE; i+= 4){
+    // for (int i = 0; i < MATRIXSIZE; i+= 4){
         
-        // i is row, multiply it by matrix size to get out access stride
-        // add one to get the 2nd column
-        printf("%lf\n", h_A[(i * MATRIXSIZE) + 1]);
+    //     // i is row, multiply it by matrix size to get out access stride
+    //     // add one to get the 2nd column
+    //     printf("%lf\n", h_A[(i * MATRIXSIZE) + 1]);
         
-        if (i == 3996){
-            printf("%lf\n", h_A[((i * MATRIXSIZE) + 3) + 1]);
-        }
-    }
+    //     if (i == 3996){
+    //         printf("%lf\n", h_A[((i * MATRIXSIZE) + 3) + 1]);
+    //     }
+    // }
 
     // Call our cuda function to do our work
     cudaEventRecord(start2);
@@ -151,7 +151,7 @@ unsigned long parallelP1(){
     
     // Error checking goes here
 
-    printf("Post work check\n");
+    //printf("Post work check\n");
 
     // Copy our memory back over to the host
     gpuErrchk(cudaMemcpy(h_A, d_A, matrixMemSize, cudaMemcpyDeviceToHost));
