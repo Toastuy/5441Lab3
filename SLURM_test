@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=0:00:20
+#SBATCH --time=0:05:00
 #SBATCH --ntasks=28 --nodes=1 --gpus-per-node=1
 #SBATCH --job-name=lab3_part3_test
 #SBATCH --account=PAS2065
@@ -13,8 +13,14 @@ cd $SLURM_SUBMIT_DIR
 cd $TMPDIR
 
 echo job started at `date` >>current.out
-time $SLURM_SUBMIT_DIR/test >>current.out
+echo part 1
+time $SLURM_SUBMIT_DIR/submit_dir/lab3p1_oadonca_donca.2 >>current1.out
+echo part 2
+time $SLURM_SUBMIT_DIR/submit_dir/lab3p2_oadonca_donca.2 >>current2.out
+echo part 3
+time $SLURM_SUBMIT_DIR/submit_dir/lab3p3_oadonca_donca.2 >>current3.out
 echo job ended at `date` >>current.out
 
-export SAVEDIR=${SLURM_SUBMIT_DIR}'/lab3_part3_test'
-mv current.out ${SAVEDIR}
+mv current1.out ${SLURM_SUBMIT_DIR}'/part1_test'
+mv current2.out ${SLURM_SUBMIT_DIR}'/part2_test'
+mv current3.out ${SLURM_SUBMIT_DIR}'/part3_test'

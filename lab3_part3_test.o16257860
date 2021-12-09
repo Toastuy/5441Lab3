@@ -1,0 +1,45 @@
+job started at Thu Dec 9 11:45:21 EST 2021
+on compute node o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709 o0709
+part 1
+Reference: Serial execution time: 0.210000 S
+Calculated: CUDA execution time: 0.006766 S
+Reference: Serial FLOPS: 152342861
+Calculated: Parallel FLOPS: 4728448512
+
+real	0m0.348s
+user	0m0.081s
+sys	0m0.219s
+part 2
+Reference: Serial FLOPS: 58936086
+Reference: Serial execution time: 1166 S
+Calculated: CUDA FLOPS: 239788933120
+Calculated: CUDA execution time: 0.573166 S
+
+real	2m16.631s
+user	1m45.557s
+sys	0m31.096s
+part 3
+Test 1 block with 32 threads
+Transpose time: 0.019439 S
+Integer operations per second: 6485788.000000
+Transpose: 1048576 Correct Elements / 1048576 Total Elements
+---------------------------------------------------------------------------
+Test 1 block with 1024 threads
+Transpose time: 0.002540 S
+Integer operations per second: 2775450.500000
+Transpose: 1048576 Correct Elements / 1048576 Total Elements
+---------------------------------------------------------------------------
+Test 2 block with 1024 threads
+Transpose time: 0.001737 S
+Integer operations per second: 2789664.500000
+Transpose: 1048576 Correct Elements / 1048576 Total Elements
+---------------------------------------------------------------------------
+Test 64 block with 1024 threads
+Transpose time: 0.000264 S
+Integer operations per second: 751092.500000
+Transpose: 1048576 Correct Elements / 1048576 Total Elements
+---------------------------------------------------------------------------
+
+real	0m0.510s
+user	0m0.267s
+sys	0m0.188s
