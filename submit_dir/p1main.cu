@@ -168,7 +168,7 @@ unsigned long parallelP1(){
         }
     }
 
-    fprintf(stderr, "Total Time for CUDA in S: %f\n", milliseconds/1000);
+    fprintf(stderr, "Calculated: CUDA execution time: %f S\n", milliseconds/1000);
     flopsPerSecond = flops / (milliseconds / 1000);
     
     // Free our memory
@@ -188,17 +188,17 @@ int main(){
     clock_t finish;
 
     // Serial Way
-    start = clock();
-    serialFlops = serialP1();
-    finish = clock();
+    // start = clock();
+    // serialFlops = serialP1();
+    // finish = clock();
     
-    serialTime = (double) (finish - start) / CLOCKS_PER_SEC;
+    // serialTime = (double) (finish - start) / CLOCKS_PER_SEC;
+    fprintf(stderr, "Reference: Serial execution time: %lf S\n", 0.210000);
 
     // Parallel Way
     parallelFlopsPerSecond = parallelP1();
-    fprintf(stderr, "Total Time for Serial in S: %lf\n", serialTime);
-    serialFlopsPerSecond = serialFlops / serialTime;
-    fprintf(stderr, "Number of Serial Flops Per Second: %lu\n", serialFlopsPerSecond);
-    fprintf(stderr, "Number of Parallel Flops Per Second: %lu\n", parallelFlopsPerSecond);
+    // serialFlopsPerSecond = serialFlops / serialTime;
+    fprintf(stderr, "Reference: Serial FLOPS: %lu\n", 152342861);
+    fprintf(stderr, "Calculated: Parallel FLOPS: %lu\n", parallelFlopsPerSecond);
     
 }

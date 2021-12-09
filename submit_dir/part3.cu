@@ -15,7 +15,7 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
     }
 }
 
-__global__ void InplaceTranspose(int *mat, int mat_dim, int cells_per_tile_x, int tiles_per_grid_x) {
+__global__ void InplaceTranspose(int *mat, int *ops, int mat_dim, int cells_per_tile_x, int tiles_per_grid_x) {
 
     int temp;
 
@@ -32,6 +32,7 @@ __global__ void InplaceTranspose(int *mat, int mat_dim, int cells_per_tile_x, in
                 temp = mat[(i+init_i)*mat_dim + (j+init_j)];
                 mat[(i+init_i)*mat_dim + (j+init_j)] = mat[(j+init_j)*mat_dim + (i+init_i)];
                 mat[(j+init_j)*mat_dim + (i+init_i)] = temp;
+                *ops += 3;
             }
         }
     }
@@ -44,9 +45,11 @@ __host__ void Transpose(int blocks, int threads) {
     fprintf(stderr, "Test %d block with %d threads\n", n_blocks, threads_pb);
 
     int* device_mat;
+    int* dev_ops;
 
     // Creating matrix
     int* host_mat;
+    int* host_ops;
 
     // Copy of matrix for checking result
     int* host_mat_copy;
@@ -58,6 +61,7 @@ __host__ void Transpose(int blocks, int threads) {
     int cells_per_tile_x = (int)ceil(sqrt((double)(mat_dim*mat_dim)/(n_blocks * pow(floor(sqrt(threads_pb)), 2))));
     int tiles_per_grid_x = ceil((double)mat_dim/cells_per_tile_x);
 
+    host_ops = new int(0);
     host_mat = new int[mat_dim*mat_dim];
     host_mat_copy = new int[mat_dim*mat_dim];
 
@@ -70,6 +74,8 @@ __host__ void Transpose(int blocks, int threads) {
 
     // Allocate on device 
     size_t memSize = mat_dim*mat_dim*sizeof(int);
+
+    gpuErrchk(cudaMalloc((void**)&dev_ops, sizeof(int)));
     gpuErrchk(cudaMalloc((void**)&device_mat, memSize));
 
     // Initialize on device
@@ -87,19 +93,23 @@ __host__ void Transpose(int blocks, int threads) {
     // Start event
     cudaEventRecord(start);
 
-    InplaceTranspose<<<dimGrid, dimBlock>>>(device_mat, mat_dim, cells_per_tile_x, tiles_per_grid_x);
+    InplaceTranspose<<<dimGrid, dimBlock>>>(device_mat, dev_ops, mat_dim, cells_per_tile_x, tiles_per_grid_x);
     gpuErrchk(cudaGetLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
     // Stop event
     cudaEventRecord(stop);
 
+    // Get int operations
+    gpuErrchk(cudaMemcpy(host_ops, dev_ops, sizeof(int), cudaMemcpyDeviceToHost));
+
     // Get transpose time in ms
     cudaEventSynchronize(stop);
     float transposeTime = 0;
     cudaEventElapsedTime(&transposeTime, start, stop);
 
-    fprintf(stderr, "Transpose time: %f ms\n", transposeTime);
+    fprintf(stderr, "Transpose time: %f S\n", transposeTime/1000);
+    fprintf(stderr, "Integer operations per second: %f\n", (*host_ops)/(transposeTime/1000));
 
     // Retrieve results
     gpuErrchk(cudaMemcpy(host_mat, device_mat, memSize, cudaMemcpyDeviceToHost));

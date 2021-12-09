@@ -26,15 +26,14 @@ int main() {
 
 
   // Perform serial version
-  time(&start);
-  //flopsPerSecond = serial_part_2();
-  time(&finish);
+  // time(&start);
+  // flopsPerSecond = serial_part_2();
+  // time(&finish);
 
-  //fprintf(stderr, "Serial Flops Per Second: %lu\n", flopsPerSecond / (finish - start));
+  fprintf(stderr, "Reference: Serial FLOPS: %lu\n", 58936086);
+  fprintf(stderr, "Reference: Serial execution time: %lu S\n", 1166);
 
   flopsPerSecond = cuda_part_2();
-
-  fprintf(stderr, "Cuda Flops Per Second: %lu\n", flopsPerSecond);
 
   return 0;
 }
@@ -51,7 +50,7 @@ unsigned long serial_part_2() {
     for (int j = 0; j < MATRIX_DIM; j++) {
       A[i * MATRIX_DIM + j] = (float) rand() / RAND_MAX + 1;
       B[i * MATRIX_DIM + j] = (float) rand() / RAND_MAX + 1;
-      flops++;
+      // flops++;
     }
   }
 
@@ -74,7 +73,7 @@ unsigned long serial_part_2() {
 }
 
 unsigned long cuda_part_2() {
-  unsigned long flops = MATRIX_DIM * MATRIX_DIM;
+  unsigned long flops = (long)MATRIX_DIM * (long)MATRIX_DIM * 2 * (long)MATRIX_DIM;
   unsigned long flopsPerSecond;
   float *d_A, *d_B, *d_C;
   float *h_A = (float *) malloc(MATRIX_DIM * MATRIX_DIM * sizeof(float *));
@@ -124,8 +123,9 @@ unsigned long cuda_part_2() {
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
 
-  
   flopsPerSecond = flops / (milliseconds / 1000);
+  fprintf(stderr, "Calculated: CUDA FLOPS: %lu\n", flopsPerSecond);
+  fprintf(stderr, "Calculated: CUDA execution time: %f S\n", milliseconds/1000);
 
   return flopsPerSecond;
 }
